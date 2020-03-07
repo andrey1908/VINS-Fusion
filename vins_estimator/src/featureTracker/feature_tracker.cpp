@@ -243,6 +243,13 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
         }
         prev_un_right_pts_map = cur_un_right_pts_map;
     }
+
+    /*
+    vector<cv::Point2f> cur_pts, cur_right_pts - точки на 2d изображении.
+    vector<int> ids - соответствие индексов текущих точек к их id.
+    map<int, cv::Point2f> prevLeftPtsMap - соответствие id предыдущих точек к их координатам.
+    */
+
     if(SHOW_TRACK)
         drawTrack(cur_img, rightImg, ids, cur_pts, cur_right_pts, prevLeftPtsMap);
 

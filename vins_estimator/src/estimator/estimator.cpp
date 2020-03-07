@@ -167,10 +167,12 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
         featureFrame = featureTracker.trackImage(t, _img);
     else
         featureFrame = featureTracker.trackImage(t, _img, _img1);
+
     //printf("featureTracker time: %f\n", featureTrackerTime.toc());
 
     if (SHOW_TRACK)
     {
+	    //Being executed
         cv::Mat imgTrack = featureTracker.getTrackImage();
         pubTrackImage(imgTrack, t);
     }
@@ -319,7 +321,7 @@ void Estimator::processMeasurements()
             prevTime = curTime;
 
             printStatistics(*this, 0);
-
+            
             std_msgs::Header header;
             header.frame_id = "world";
             header.stamp = ros::Time(feature.first);
