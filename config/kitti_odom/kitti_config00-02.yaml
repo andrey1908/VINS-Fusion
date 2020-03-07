@@ -1,13 +1,16 @@
 %YAML:1.0
 
 #common parameters
+pose_graph_save_path: "poses_graphs/11/"
+load_previous_pose_graph: 0
+
 imu: 0
-num_of_cam: 2  
+num_of_cam: 2
 
 imu_topic: ""
 image0_topic: "/leftImage"
 image1_topic: "/rightImage"
-output_path: "/home/tony-ws1/output/"
+output_path: "results/11/"
 
 cam0_calib: "cam00-02.yaml"
 cam1_calib: "cam00-02.yaml"
