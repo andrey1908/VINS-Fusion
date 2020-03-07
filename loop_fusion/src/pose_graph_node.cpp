@@ -35,6 +35,8 @@
 #define SKIP_FIRST_CNT 10
 using namespace std;
 
+FILE* outFile;
+
 queue<sensor_msgs::ImageConstPtr> image_buf;
 queue<sensor_msgs::PointCloudConstPtr> point_buf;
 queue<nav_msgs::Odometry::ConstPtr> pose_buf;
@@ -67,6 +69,7 @@ ros::Publisher pub_odometry_rect;
 std::string BRIEF_PATTERN_FILE;
 std::string POSE_GRAPH_SAVE_PATH;
 std::string VINS_RESULT_PATH;
+std::string OUTPUT_FOLDER;
 CameraPoseVisualization cameraposevisual(1, 0, 0, 1);
 Eigen::Vector3d last_t(-100, -100, -100);
 double last_image_time = -1;
@@ -191,7 +194,8 @@ void pose_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
 
 void vio_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
 {
-    //ROS_INFO("vio_callback!");
+    Eigen::Matrix<double, 4, 4> T;
+    T = Eigen::Matrix4d::Identity();
     Vector3d vio_t(pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y, pose_msg->pose.pose.position.z);
     Quaterniond vio_q;
     vio_q.w() = pose_msg->pose.pose.orientation.w;
@@ -201,10 +205,20 @@ void vio_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
 
     vio_t = posegraph.w_r_vio * vio_t + posegraph.w_t_vio;
     vio_q = posegraph.w_r_vio *  vio_q;
-
     vio_t = posegraph.r_drift * vio_t + posegraph.t_drift;
     vio_q = posegraph.r_drift * vio_q;
 
+    T.block<3, 3>(0, 0) = Eigen::Matrix3d(vio_q);
+    T.block<3, 1>(0, 3) = vio_t;
+    if(outFile != NULL)
+        fprintf (outFile, "%f %f %f %f %f %f %f %f %f %f %f %f \n",T(0,0), T(0,1), T(0,2),T(0,3),
+																   T(1,0), T(1,1), T(1,2),T(1,3),
+																   T(2,0), T(2,1), T(2,2),T(2,3));
+    if (pose_msg->child_frame_id == "skip") {
+        return;
+    }
+    
+    //ROS_INFO("vio_callback!");
     nav_msgs::Odometry odometry;
     odometry.header = pose_msg->header;
     odometry.header.frame_id = "world";
@@ -364,6 +378,7 @@ void process()
                                    point_3d, point_2d_uv, point_2d_normal, point_id, sequence);   
                 m_process.lock();
                 start_flag = 1;
+                // ok
                 posegraph.addKeyFrame(keyframe, 1);
                 m_process.unlock();
                 frame_index++;
@@ -382,6 +397,9 @@ void command()
         char c = getchar();
         if (c == 's')
         {
+            if(outFile != NULL)
+		        fclose (outFile);
+            outFile = NULL;
             m_process.lock();
             posegraph.savePoseGraph();
             m_process.unlock();
@@ -391,6 +409,12 @@ void command()
         }
         if (c == 'n')
             new_sequence();
+        if (c == 'c')
+        {
+            if(outFile != NULL)
+		        fclose (outFile);
+            outFile = NULL;
+        }
 
         std::chrono::milliseconds dura(5);
         std::this_thread::sleep_for(dura);
@@ -453,11 +477,16 @@ int main(int argc, char **argv)
     fsSettings["pose_graph_save_path"] >> POSE_GRAPH_SAVE_PATH;
     fsSettings["output_path"] >> VINS_RESULT_PATH;
     fsSettings["save_image"] >> DEBUG_IMAGE;
+    fsSettings["output_path"] >> OUTPUT_FOLDER;
 
     LOAD_PREVIOUS_POSE_GRAPH = fsSettings["load_previous_pose_graph"];
     VINS_RESULT_PATH = VINS_RESULT_PATH + "/vio_loop.csv";
     std::ofstream fout(VINS_RESULT_PATH, std::ios::out);
     fout.close();
+
+    outFile = fopen((OUTPUT_FOLDER + "/vio_loop.txt").c_str(),"w");
+    if(outFile == NULL)
+        printf("Output path dosen't exist: %s\n", OUTPUT_FOLDER.c_str());
 
     int USE_IMU = fsSettings["imu"];
     posegraph.setIMUFlag(USE_IMU);

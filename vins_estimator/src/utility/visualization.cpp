@@ -31,6 +31,8 @@ static Vector3d last_path(0.0, 0.0, 0.0);
 
 size_t pub_counter = 0;
 
+static ofstream output_file;
+
 void registerPub(ros::NodeHandle &n)
 {
     pub_latest_odometry = n.advertise<nav_msgs::Odometry>("imu_propagate", 1000);
@@ -48,6 +50,8 @@ void registerPub(ros::NodeHandle &n)
 
     cameraposevisual.setScale(0.1);
     cameraposevisual.setLineWidth(0.01);
+
+    sleep(1);
 }
 
 void pubLatestOdometry(const Eigen::Vector3d &P, const Eigen::Quaterniond &Q, const Eigen::Vector3d &V, double t)
@@ -172,6 +176,22 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
         Eigen::Vector3d tmp_T = estimator.Ps[WINDOW_SIZE];
         printf("time: %f, t: %f %f %f q: %f %f %f %f \n", header.stamp.toSec(), tmp_T.x(), tmp_T.y(), tmp_T.z(),
                                                           tmp_Q.w(), tmp_Q.x(), tmp_Q.y(), tmp_Q.z());
+    } else {
+        nav_msgs::Odometry odometry;
+        odometry.header = header;
+        odometry.header.frame_id = "skip";
+        odometry.child_frame_id = "skip";
+        Quaterniond tmp_Q;
+        int frame_count = estimator.frame_count;
+        tmp_Q = Quaterniond(estimator.Rs[frame_count]);
+        odometry.pose.pose.position.x = estimator.Ps[frame_count].x();
+        odometry.pose.pose.position.y = estimator.Ps[frame_count].y();
+        odometry.pose.pose.position.z = estimator.Ps[frame_count].z();
+        odometry.pose.pose.orientation.x = tmp_Q.x();
+        odometry.pose.pose.orientation.y = tmp_Q.y();
+        odometry.pose.pose.orientation.z = tmp_Q.z();
+        odometry.pose.pose.orientation.w = tmp_Q.w();
+        pub_odometry.publish(odometry);
     }
 }
 
