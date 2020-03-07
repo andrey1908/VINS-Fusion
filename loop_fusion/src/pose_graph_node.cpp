@@ -35,7 +35,7 @@
 #define SKIP_FIRST_CNT 10
 using namespace std;
 
-FILE* outFile;
+static FILE* outFile;
 
 queue<sensor_msgs::ImageConstPtr> image_buf;
 queue<sensor_msgs::PointCloudConstPtr> point_buf;
@@ -414,6 +414,7 @@ void command()
             if(outFile != NULL)
 		        fclose (outFile);
             outFile = NULL;
+            printf("OK\n");
         }
 
         std::chrono::milliseconds dura(5);
